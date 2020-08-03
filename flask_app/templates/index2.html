@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Index
+{% endblock %}
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+<div class="mb-3" id="msg">{{ message }}</div>
+
+<!-- Vue.js entry point -->
+<div id="app" class="m-3">
+    <div>
+        <div class="alert alert-info">
+            <h5>{{alert}}</h5>
+        </div>
+        <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Mail</th>
+                <th>Age</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+            <tr>
+                <th>{{item[0]}}</th>
+                <td>{{item[1]}}</td>
+                <td>{{item[2]}}</td>
+                <td>{{item[3]}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>     
+    </div>
+</div>
+{% endblock %}
+
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}

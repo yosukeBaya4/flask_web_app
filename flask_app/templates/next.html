@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Next
+{% endblock %}
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+<p>{{ message }}</p>
+<form method="post" aciton="/hello/">
+    <input type="text" name="send" 
+        value="{{ send }}">
+    <input type="submit">
+</form>
+{% endblock %}
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "layout.html" %}
+
+{% block title %}
+Index
+{% endblock %}
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+<div class="mb-3" id="msg">{{ message }}</div>
+
+<!-- Vue.js entry point -->
+<div id="app" class="m-3">
+    {% raw %}
+    <mycomp/>
+    {% endraw %}
+</div>
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="alert alert-info">
+            <h5>{{alert}}</h5>
+        </div>
+        <div class="form-group">
+            <label for="id">Find</label>
+            <input type="text" class="form-control" 
+                id="find" v-model="find">
+        </div>           
+        <div class="form-group">
+            <button class="btn btn-primary"
+                v-on:click="action">Search</button>
+        </div>
+        <hr>
+        <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Mail</th>
+                <th>Age</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="item in data">
+                <th>{{item.id}}</th>
+                <td>{{item.name}}</td>
+                <td>{{item.mail}}</td>
+                <td>{{item.age}}</td>
+            </tr>
+        </tbody>
+        </table>     
+    </div>
+</script>
+{% endraw %}
+
+<!-- Vue.js script -->
+<script>
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            find: '',
+            alert:'This is SQLite3 Database sample.',
+            data: [(-1,'wait...','','')]
+        }
+    },
+    methods:{
+        action: function() {
+            let formData = new FormData();
+            formData.append("find", this.find);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/find',
+                data: formData,
+                processData: false,
+                contentType: false,
+
+                success: function (data) {
+                    self.data = eval(data);
+                    self.alert = 'find: "' + self.find + '".'
+                },
+                error: function(request, status, err) {
+                    console.log(err);
+                }
+            });
+        }
+    },
+});
+
+
+// start Vue.
+new Vue({
+    el:'#app',
+});
+
+
+
+
+</script>
+{% endblock %}
+
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}

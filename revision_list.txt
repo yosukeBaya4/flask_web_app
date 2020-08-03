@@ -1,0 +1,4746 @@
+﻿Pythonフレームワーク Flaskで学ぶWebアプリケーションのしくみとつくり方
+
+
+本書掲載リスト
+
+
+
+
+リスト1-1
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>Index</title>
+    <meta charset="utf-8"/>
+</head>
+<body>
+    <h1>Index</h1>
+    <p>This is sample page!!</p>
+</body>
+</html>
+
+
+
+
+リスト1-2
+from http.server import SimpleHTTPRequestHandler, HTTPServer
+
+
+server = HTTPServer(('',8000), SimpleHTTPRequestHandler)
+server.serve_forever()
+
+
+
+
+リスト1-3
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+class HelloServerHandler(BaseHTTPRequestHandler):
+
+
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Sample web-server!!!')
+        return
+
+
+server = HTTPServer(('',8000), HelloServerHandler)
+server.serve_forever()
+
+
+
+
+リスト1-4
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+with open('index.html', mode='r') as f:
+    index = f.read()
+
+
+class HelloServerHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(index.encode('utf-8'))
+        return
+
+
+HTTPServer(('',8000), HelloServerHandler).serve_forever()
+
+
+
+
+リスト1-5
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>{title}</title>
+    <meta charset="utf-8"/>
+</head>
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+</body>
+</html>
+
+
+
+
+リスト1-6
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+with open('index.html', mode='r') as f:
+    index = f.read()
+
+
+class HelloServerHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        html = index.format(
+            title='Hello', 
+            message='ようこそ、HTTPServerの世界へ！'
+        )
+        self.wfile.write(html.encode('utf-8'))
+        return
+
+
+HTTPServer(('',8000), HelloServerHandler).serve_forever()
+
+
+
+
+リスト1-7
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>{title}</title>
+    <meta charset="utf-8"/>
+    <style>
+    body {{margin:10px;}}
+    h1 {{color:lightgray;font-size:36pt;}}
+    p {{font-size:16pt;}}
+    </style>
+</head>
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+</body>
+</html>
+
+
+
+
+リスト1-8
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>Next</title>
+    <meta charset="utf-8"/>
+    <style>
+    body {{margin:10px;}}
+    h1 {{text-align: right;}}
+    p {{font-size:14pt;}}
+    pre {{background-color:aliceblue;}}
+    </style>
+</head>
+<body>
+    <h1>Next Page</h1>
+    <p>{message}</p>
+    <pre>{data}</pre>
+</body>
+</html>
+
+
+
+
+リスト1-9
+from urllib.parse import urlparse
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+# load html file.
+with open('index.html', mode='r') as f:
+    index = f.read()
+with open('next.html', mode='r') as f:
+    next = f.read()
+
+
+class HelloServerHandler(BaseHTTPRequestHandler):
+
+
+    def do_GET(self):
+        _url = urlparse(self.path)
+        if (_url.path == '/'):
+            self.index()
+        elif (_url.path == '/next'):
+            self.next()
+        else:
+            self.error()
+    
+    # index action.
+    def index(self):
+        self.send_response(200)
+        self.end_headers()
+        html = index.format(
+            title='Hello', 
+            message='ようこそ、HTTPServerの世界へ！'
+        )
+        self.wfile.write(html.encode('utf-8'))
+        return
+
+
+    # next action.
+    def next(self):
+        self.send_response(200)
+        self.end_headers()
+        html = next.format(
+            data='{\n  data:"this is data."\n}'
+        )
+        self.wfile.write(html.encode('utf-8'))
+        return
+
+
+    # error action.
+    def error(self):
+        self.send_error(404, "CANNOT ACCESS!!")
+        return
+
+
+HTTPServer(('',8000), HelloServerHandler).serve_forever()
+
+
+
+
+リスト1-10
+routes = []
+
+
+def route(path, method):
+    routes.append((path, method))
+
+
+# add route setting.
+route('/', 'index')
+route('/index', 'index')
+route('/next', 'next')
+
+
+
+
+リスト1-11
+def do_GET(self):
+    global routes
+    _url = urlparse(self.path)
+    for r in routes:
+        if (r[0] == _url.path):
+            eval('self.' + r[1] + '()')
+            break
+    else:
+        self.error()
+    return
+
+
+
+
+リスト1-12
+# from urllib.parse import urlparse, parse_qs
+
+
+def next(self):
+    _url = urlparse(self.path)
+    query = parse_qs(_url.query)
+    id = query['id'][0]
+    password = query['pass'][0]
+    msg = 'id=' + id + ', password=' + password
+    self.send_response(200)
+    self.end_headers()
+    html = next.format(
+        message = msg,
+        data = query
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+（※from urllib.parse import urlparse を冒頭のコメントの形に修正して下さい）
+
+
+
+
+リスト1-13
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <p><a href="{link}">go to Next &gt;&gt;</a></p>
+</body>
+
+
+
+
+リスト1-14
+def index(self):
+    _url = urlparse(self.path)
+    self.send_response(200)
+    self.end_headers()
+    html = index.format(
+        title='Hello', 
+        link='/next?' + _url.query,
+        message='ようこそ、HTTPServerの世界へ！'
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+
+
+リスト1-15
+def next(self):
+    self.send_response(200)
+    self.end_headers()
+    html = next.format(
+        message = 'header data.',
+        data = self.headers
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+
+
+リスト1-16
+route('/xml', 'xml')
+
+
+
+
+リスト1-17
+def xml(self):
+    xml = '''<?xml version="1.0" encoding="UTF-8"?>
+    <data>
+        <person>
+            <name>Taro</name>
+            <mail>taro@yamada</mail>
+            <age>39</age>
+        </person>
+        <message>Hello Python!!</message>
+    </data>'''
+    self.send_response(200)
+    self.send_header('Content-Type', \
+        'application/xml; charset=utf-8')
+    self.end_headers()
+    self.wfile.write(xml.encode('utf-8'))
+    return
+
+
+
+
+リスト1-18
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <div>
+        <form method="post" action="/">
+            <input type="text" name="textfield">
+            <input type="submit">
+        </form>
+    </div>
+</body>
+
+
+
+
+リスト1-19
+def index(self):
+    self.send_response(200)
+    self.end_headers()
+    html = index.format(
+        title='Hello', 
+        message='Form送信'
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+
+
+リスト1-20
+# from cgi import FieldStorage
+
+
+def do_POST(self):
+    form = FieldStorage(
+        fp=self.rfile, 
+        headers=self.headers,
+        environ={'REQUEST_METHOD':'POST'})
+    res = form['textfield'].value
+    self.send_response(200)
+    self.end_headers()
+    html = next.format(
+        message = 'you typed: ' + res,
+        data = form
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+（※冒頭に、from cgi import FieldStorage を追記しておく）
+
+
+
+
+リスト1-21
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <div>
+        <form method="post" action="/">
+            <div>
+                <input type="checkbox" id="ck1" name="check1">
+                <label for="ck1">Checkbox 1</label>
+            </div>
+            <div>
+                <input type="checkbox" id="ck2" name="check2">
+                <label for="ck2">Checkbox 2</label>
+            </div>
+            <input type="submit">
+        </form>
+    </div>
+</body>
+
+
+
+
+リスト1-22
+def do_POST(self):
+    form = FieldStorage(
+        fp=self.rfile, 
+        headers=self.headers,
+        environ={'REQUEST_METHOD':'POST'})
+    
+    if 'check1' in form:
+        ck1 = True
+    else:
+        ck1 = False
+    if 'check2' in form:
+        ck2 = True
+    else:
+        ck2 = False
+    res = 'Check1: ' + str(ck1) + \
+        ', Check2:' + str(ck2)
+    self.send_response(200)
+    self.end_headers()
+    html = next.format(
+        message = res,
+        data = form
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+
+
+リスト1-23
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <div>
+        <form method="post" action="/">
+            <div>
+                <input type="radio" id="r1" name="radio1" value="male">
+                <label for="r1">male</label>
+            </div>
+            <div>
+                <input type="radio" id="r2" name="radio1" value="female">
+                <label for="r2">female</label>
+            </div>
+            <input type="submit">
+        </form>
+    </div>
+</body>
+
+
+
+
+リスト1-24
+def do_POST(self):
+    form = FieldStorage(
+        fp=self.rfile, 
+        headers=self.headers,
+        environ={'REQUEST_METHOD':'POST'})
+    
+    if 'radio1' in form:
+        r1 = form['radio1'].value
+    else:
+        r1 = 'not selected'
+    res = 'Radio: ' + str(r1)
+    self.send_response(200)
+    self.end_headers()
+    html = next.format(
+        message = res,
+        data = form
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+
+
+リスト1-25
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <div>
+        <form method="post" action="/">
+            <select name="sel1" multiple>
+                <option>Windows</option>
+                <option>macOS</option>
+                <option>Linux</option>
+                <option>android</option>
+                <option>iOS</option>
+                <option>iPadOS</option>
+                <option>ChromeOS</option>
+            </select>
+            <input type="submit">
+        </form>
+    </div>
+</body>
+
+
+
+
+リスト1-26
+def do_POST(self):
+    form = FieldStorage(
+        fp=self.rfile, 
+        headers=self.headers,
+        environ={'REQUEST_METHOD':'POST'})
+    
+    if 'sel1' in form:
+        items = str(form.getlist('sel1'))
+    else:
+        items = 'no-item'
+    res = 'Select:' + str(items)
+    self.send_response(200)
+    self.end_headers()
+    html = next.format(
+        message = res,
+        data = form
+    )
+    self.wfile.write(html.encode('utf-8'))
+    return
+
+
+
+
+リスト1-27
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <div>
+        <form method="post" action="/">
+            <input type="hidden" name="last" value="{last}">
+            <input type="hidden" name="animal" value="{animal}">
+            <div>
+                <input type="radio" id="r1" name="answer" 
+                    value="{yes}"checked>
+                <label for="r1">はい</label>
+            </div>
+            <div>
+                <input type="radio" id="r2" name="answer" 
+                    value="{no}">
+                <label for="r2">いいえ</label>
+            </div>
+            <input type="submit">
+        </form>
+    </div>
+</body>
+
+
+
+
+リスト1-28
+<body>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <div>
+        <form method="post" action="/end">
+            <input type="hidden" name="last" value="{last}">
+            <input type="hidden" name="animal" value="{animal}">
+            <div>
+                <p>動物の名前:</p>
+                <input type="text" name="animalname">
+            </div>
+            <div>
+                <p>その動物が正解になる質問：</p>
+                <input type="text" name="question" size="60">
+            </div>
+            <input type="submit">
+        </form>
+    </div>
+</body>
+
+
+
+
+リスト1-29
+from cgi import FieldStorage
+from urllib.parse import urlparse, parse_qs
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+# load html file.
+with open('index.html', mode='r', encoding="utf-8") as f:
+    index = f.read()
+with open('next.html', mode='r', encoding="utf-8") as f:
+    next = f.read()
+
+
+routes = []
+
+
+def route(path, method):
+    routes.append((path, method))
+
+
+# append route.
+route('/', 'index')
+route('/index', 'index')
+
+
+# data.
+data = [
+    ['それは人間のペットですか', 1, 2],
+    ['それはニャーと鳴きますか', 'ネコ', 'イヌ'],
+    ['それは食べると美味しいですか', 'うし', 'ライオン']
+]
+
+
+class HelloServerHandler(BaseHTTPRequestHandler):
+
+
+    # GET Method.
+    def do_GET(self):
+        global routes
+        a = 1
+        print(type(a))
+        _url = urlparse(self.path)
+        for r in routes:
+            if (r[0] == _url.path):
+                eval('self.' + r[1] + '()')
+                break
+        else:
+            self.error()
+        return
+
+
+    # index action.
+    def index(self):
+        self.send_response(200)
+        self.end_headers()
+        html = index.format(
+            title='Animal', 
+            message='質問に答えてね!',
+            last=-1,
+            animal='',
+            yes=0,
+            no=0,
+        )
+        self.wfile.write(html.encode('utf-8'))
+        return
+
+
+    # error action.
+    def error(self):
+        global routes
+        self.send_error(404, "CANNOT ACCESS!!")
+        return
+
+
+    # POST Method.
+    def do_POST(self):
+        _url = urlparse(self.path)
+        if (_url.path == '/'):
+            self.quiz()
+        elif (_url.path == '/end'):
+            self.end()
+        return
+    
+    # quiz action
+    def quiz(self):
+        form = FieldStorage(
+            fp=self.rfile, 
+            headers=self.headers,
+            environ={'REQUEST_METHOD':'POST'})
+
+
+        try:
+            answer = int(form['answer'].value)
+            if (answer == -1):
+                html = index.format(
+                    title='Animal', 
+                    message='やった～!!',
+                    last=-1,
+                    animal='',
+                    yes=0,
+                    no=0,
+                )
+            elif (answer == -2):
+                html = next.format(
+                    title='Animal', 
+                    message='うーん、答えを教えて。',
+                    last=form['last'].value,
+                    animal=form['animal'].value
+                )
+            else:
+                html = index.format(
+                    title='Animal', 
+                    message=data[answer][0],
+                    last=answer,
+                    animal=form['answer'].value,
+                    yes=data[answer][1],
+                    no=data[answer][2],
+                )
+        except:
+            html = index.format(
+                title='Animal', 
+                message='それは、' + form['answer'].value + 'ですか。',
+                last=form['last'].value,
+                animal=form['answer'].value,
+                yes=-1,
+                no=-2,
+            )
+
+
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(html.encode('utf-8'))
+        return
+
+
+    # end action
+    def end(self):
+        form = FieldStorage(
+            fp=self.rfile, 
+            headers=self.headers,
+            environ={'REQUEST_METHOD':'POST'})
+        animalname = form['animalname'].value
+        question = form['question'].value
+        last = int(form['last'].value)
+        animal = form['animal'].value
+        newdata = [question, animalname, animal]
+        n = len(data)
+        if (data[last][1] == animal):
+            data[last][1] = n
+        elif (data[last][2] == animal):
+            data[last][2] = n
+
+
+        data.append(newdata)
+
+
+        html = index.format(
+            title='Animal', 
+            message='なるほど、わかりました！',
+            last=-1,
+            animal='',
+            yes=0,
+            no=0,
+        )
+        
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(html.encode('utf-8'))
+        return
+        
+HTTPServer(('',8000), HelloServerHandler).serve_forever()
+
+
+
+
+リスト2-1
+from flask import Flask
+
+
+app = Flask(__name__)
+
+
+@app.route('/')
+def hello_world():
+    return 'Welcome to Flask World!'
+
+
+
+
+リスト2-2
+if __name__ == '__main__':
+    app.debug = True
+    app.run(host='localhost')
+
+
+
+
+リスト2-3
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>Index</title>
+    <meta charset="utf-8"/>
+    <style>
+    body {margin:10px;}
+    h1 {color:lightgray;font-size:30pt;}
+    p {font-size:14pt;}
+    </style>
+</head>
+<body>
+    <h1>Index</h1>
+    <p>This is Flask sample.</p>
+</body>
+</html>
+
+
+
+
+リスト2-4
+from flask import Flask, render_template
+
+
+app = Flask(__name__)
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+
+
+リスト2-5
+<body>
+    <h1>{{title}}</h1>
+    <p>{{message}}</p>
+</body>
+
+
+
+
+リスト2-6
+@app.route('/')
+def index():
+    return render_template('index.html', \
+        title="Index with Jinja", \
+        message="これはJinjaテンプレートの利用例です。!")
+
+
+
+
+リスト2-7
+@app.route('/<id>/<password>')
+def index2(id, password):
+    msg = 'id: %s, password: %s' % (id, password)
+    return render_template('index.html', \
+        title="Index with Jinja", \
+        message=msg)
+
+
+
+
+リスト2-8
+body {
+    margin: 10px;
+    background-color: aliceblue;
+}
+h1 {
+    color: lightsteelblue;
+    font-size: 36pt;
+    margin:0px;
+}
+p {
+    font-size: 14pt;
+}
+
+
+
+
+リスト2-9
+<head>
+    <title>Index</title>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" 
+        href="{{url_for('static', filename='style.css')}}">
+</head>
+
+
+
+
+リスト2-10
+from flask import Flask, render_template, url_for
+
+
+
+
+リスト2-11
+<body>
+    <h1>{{title}}</h1>
+    <p>{{message}}</p>
+    <div>
+        <form method="post" action="/">
+            <input type="text" name="field">
+            <input type="submit">
+        </form>
+    </div>
+</body>
+
+
+
+
+リスト2-12
+from flask import Flask, render_template, request
+
+
+app = Flask(__name__)
+
+
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title="Form sample", \
+        message="お名前は？")
+
+
+@app.route('/', methods=['POST'])
+def form():
+    field = request.form['field']
+    return render_template('index.html', \
+        title="Form sample", \
+        message="こんにちは、%sさん！" % field)
+
+
+
+
+リスト2-13
+<body>
+    <h1>{{title}}</h1>
+    <p>{{message}}</p>
+    <form method="post" action="/">
+        <div>
+            <input type="checkbox" name="check" id="ck1">
+            <label for="ck1">Checkbox</label>
+        </div>
+        <div>
+            <input type="radio" name="radio" id="r1" value="A">
+            <label for="r1">radio 1</label>
+        </div>
+        <div>
+            <input type="radio" name="radio" id="r2" value="B">
+            <label for="r2">radio 2</label>
+        </div>
+        <div>
+            <select name="sel" multiple>
+                <option>Orange</option>
+                <option>Grape</option>
+                <option>Lemon</option>
+                <option>Pineapple</option>
+            </select>
+        </div>
+        <div>
+            <input type="submit">
+        </div>
+    </form>
+</body>
+
+
+
+
+リスト2-14
+@app.route('/', methods=['POST'])
+def form():
+    ck = request.form.get('check')
+    rd = request.form.get('radio')
+    sel = request.form.getlist('sel')
+    return render_template('index.html', \
+        title="Form sample", \
+        message=[ck, rd, sel])
+
+
+
+
+リスト2-15
+<body>
+    <h1>{{title}}</h1>
+    {% if flg %}
+        <p style="background-color:red; font-weight:bold;">
+            警告！</p>
+    {% else %}
+        <p style="background-color:lightblue">
+            Information</p>
+    {% endif %}
+    <p>{{message}}</p>
+</body>
+
+
+
+
+リスト2-16
+@app.route('/', methods=['GET'])
+def index():
+    flg = True #★
+    return render_template('index.html', \
+        title="Template sample", \
+        message="This is Jinja template sample.", \
+        flg=flg )
+
+
+
+
+リスト2-17
+<body>
+    <h1>{{title}}</h1>
+    <p>{{message}}</p>
+    <ul>
+    {% for item in data %}
+        <li>{{item}}</li>
+    {% endfor %}
+    </ul>
+</body>
+
+
+
+
+リスト2-18
+@app.route('/', methods=['GET'])
+def index():
+    data = ['Windows', 'macOS', 'Linux', 'ChromeOS'] #★
+    return render_template('index.html', \
+        title="Form sample", \
+        message=data, \
+        data=data )
+
+
+
+
+リスト2-19
+<body>
+    <h1>{{title}}</h1>
+    {% autoescape true %}
+    <p>{{ message }}</p>
+    {% endautoescape %}
+    {% autoescape false %}
+    <p>{{ message }}</p>
+    {% endautoescape %}
+</body>
+
+
+
+
+リスト2-20
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Template sample', \
+        message='<a href="/">go to top page</a>'  )
+
+
+
+
+リスト2-21――index.htmlの<body>タグ
+<body>
+    <h1>{{title}}</h1>
+    <p>{{ message }}</p>
+    {% set message = 'メッセージはありません。' %}
+    <p>{{ message }}</p>
+</body>
+
+
+
+
+リスト2-22――app.pyのindex関数
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Template sample', \
+        message='※メッセージがあります。' \
+        )
+
+
+
+
+リスト2-23――index.htmlの<body>タグ
+<body>
+    <h1>{{title}}</h1>
+    <p>{{ message | upper }}</p>
+    <p>{{ 'My name is "%s". Mail address is "%s".' | 
+            format(person['name'], person['mail'])}}</p>
+    <ul>
+    {% for item in data | reverse %}
+    <li>{{ item }}</li>
+    {% endfor %}
+    </ul>
+</body>
+
+
+
+
+リスト2-24――app.pyのindex関数
+@app.route('/', methods=['GET'])
+def index():
+    data = ['One', 'Two', 'Three']
+    person ={'name':'Taro', 'mail':'taro@yamada'}
+    return render_template('index.html', \
+        title='Template sample', \
+        message='This is sample message.', \
+        data=data ,\
+        person=person \
+        )
+
+
+
+
+リスト2-25
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" 
+        href="{{url_for('static', filename='style.css')}}">
+</head>
+<body>
+    <h1>{% block headline %}{% endblock %}</h1>
+
+
+    {% block content %}{% endblock %}
+    
+    <div class="footer">
+        {% block footer %}{% endblock %}
+    </div>
+</body>
+</html>
+
+
+
+
+リスト2-26
+div.footer {
+    text-align: right;
+    border-bottom: 1px solid lightskyblue;
+    color: lightskyblue;
+    margin: 50px 0px;
+}
+
+
+
+
+リスト2-27
+{% extends "layout.html" %}
+
+
+{% block title %}
+Index
+{% endblock %}
+
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+
+{% block content %}
+<p>{{ message }}</p>
+{% endblock %}
+
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}
+
+
+
+
+リスト2-28
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Template sample', \
+        message='※これは、サンプルのページです。', \
+        )
+
+
+
+
+リスト2-29
+{% extends "layout.html" %}
+
+
+{% block title %}
+Next
+{% endblock %}
+
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+
+{% block content %}
+<p>{{ message }}</p>
+<pre>{{ data }}</pre>
+{% endblock %}
+
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}
+
+
+
+
+リスト2-30
+pre {
+    background-color: white;
+    font-size: 12pt;
+    padding: 10px;
+}
+
+
+
+
+リスト2-31
+@app.route('/next', methods=['GET'])
+def next():
+    return render_template('next.html', \
+        title='Next page', \
+        message='※これは、別ページのサンプルです。', \
+        data= ['One', 'Two', 'Three' ] )
+
+
+
+
+リスト2-32
+@app.template_filter('sum')
+def sum_filter(data):
+    total = 0
+    for item in data:
+        total += item
+    return total
+
+
+app.jinja_env.filters['sum'] = sum_filter
+
+
+
+
+リスト2-33
+@app.route('/', methods=['GET'])
+def index():
+    n = random.randrange(5, 10)
+    data = []
+    for n in range(n):
+        data.append(random.randrange(0, 100))
+    return render_template('index.html', \
+        title='Template sample', \
+        message='※合計を計算する：', \
+        data=data
+        )
+
+
+（※スクリプトの冒頭に、 import random を追記しておいて下さい）
+
+
+
+
+リスト2-34
+{% block content %}
+<p>{{ message }}</p>
+<p>Total: {{ data | sum }}</p>
+<pre>{{ data }}</pre>
+</p>
+{% endblock %}
+
+
+
+
+リスト2-35
+@app.context_processor
+def sample_processor():
+    def total(n):
+        total = 0
+        for i in range(n + 1):
+            total += i
+        return total
+    return dict(total=total)
+
+
+
+
+リスト2-36
+<p>total: {{sample(100)}}</p>
+
+
+
+
+リスト2-37
+{% block content %}
+<p>{{ message }}</p>
+<form method="post" aciton="/hello/">
+    <input type="text" name="send" 
+        value="{{ send }}">
+    <input type="submit">
+</form>
+{% endblock %}
+
+
+
+
+リスト2-38
+from flask.views import MethodView
+
+
+class HelloAPI(MethodView):
+    send = ''
+
+
+    def get(self):
+        return render_template('next.html', \
+            title='Next page', \
+            message='何か書いて下さい。', \
+            send=HelloAPI.send )
+
+
+    def post(self):
+        HelloAPI.send = request.form.get('send')
+        return render_template('next.html', \
+            title='Next page', \
+            message='You send: ' + HelloAPI.send , \
+            send=HelloAPI.send )
+
+
+app.add_url_rule('/hello/', view_func=HelloAPI.as_view('hello'))
+
+
+
+
+リスト2-39
+# secret_keyにランダムなbyte文字列を設定する
+app.secret_key = b'random string...'
+
+
+class HelloAPI(MethodView):
+    send = ''
+
+
+    def get(self):
+        if 'send' in session:
+            msg = 'send: ' + session['send']
+            send = session['send']
+        else:
+            msg = '何か書いて下さい。'
+            send = ''
+        return render_template('next.html', \
+            title='Next page', \
+            message=msg, \
+            send=send )
+
+
+    def post(self):
+        session['send'] = request.form['send']
+        return redirect('/')
+
+
+（※flaskのインポート文を以下のように修正して下さい
+ # from flask import Flask, render_template, request, session, url_for, redirect）
+
+
+
+
+リスト2-40
+{% extends "layout.html" %}
+
+
+{% block title %}
+Login
+{% endblock %}
+
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+
+{% block content %}
+<p>{{ message }}</p>
+<form method="post" aciton="/login">
+<table>
+    <tr>
+        <th>id</th>
+        <td>
+            <input type="text" name="id" value="{{id}}">
+        </td>
+    </tr>
+    <tr>
+        <th>password</th>
+        <td>
+            <input type="password" name="pass">
+        </td>
+    </tr>
+    <th></th><td>
+        <input type="submit" value="Login">
+    </td>
+    </div>
+</form>
+</table>
+{% endblock %}
+
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}
+
+
+
+
+リスト2-41
+{% extends "layout.html" %}
+
+
+{% block title %}
+Message
+{% endblock %}
+
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+
+{% block content %}
+<div class="logout"><a href="/logout">Logout</a></div>
+<p>{{ message }}</p>
+<form method="post" aciton="/">
+    <table>
+        <tr>
+            <th>Message</th>
+            <td>
+                <input type="text" name="comment" 
+                    width="80">
+            </td>
+            <td>
+                <input type="submit" value="POST NOW!">
+            </td>
+        </tr>
+    </table>
+</form>
+<hr>
+<ul>
+{% for item in data | reverse %}
+    <li>{{item[1]}} ({{item[0]}})</li>
+{% endfor %}
+</ul>
+{% endblock %}
+
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}
+
+
+
+
+リスト2-42
+div.logout {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    font-weight: bold;
+    font-size: 12pt;
+}
+
+
+
+
+リスト2-43
+from flask import Flask, render_template, request, session, redirect
+
+
+app = Flask(__name__)
+app.secret_key = b'random string...'
+
+
+member_data = {}
+message_data = []
+
+
+@app.route('/', methods=['GET'])
+def index():
+    global message_data
+    if 'login' in session and session['login']:
+        msg = 'Login id:' + session['id']
+        return render_template('messages.html', \
+            title='Messages', \
+            message=msg, \
+            data=message_data )
+    else:
+        return redirect('/login')
+
+
+@app.route('/', methods=['POST'])
+def form():
+    msg = request.form.get('comment')
+    message_data.append((session['id'], msg))
+    if len(message_data) > 25:
+        message_data.pop(0)
+    return redirect('/')
+
+
+# login page access
+@app.route('/login', methods=['GET'])
+def login():
+    return render_template('login.html', \
+        title='Login', \
+        err=False, \
+        message='IDとパスワードを入力：', \
+        id='' )
+
+
+# login form sended.
+@app.route('/login', methods=['POST'])
+def login_post():
+    global member_data
+    id = request.form.get('id')
+    pswd = request.form.get('pass')
+    if id in member_data:
+        if pswd == member_data[id]:
+            session['login'] = True
+        else:
+            session['login'] = False
+    else:
+        member_data[id] = pswd
+        session['login'] = True
+    session['id'] = id
+    if session['login']:
+        return redirect('/')
+    else:
+        return render_template('login.html', \
+            title='Login', \
+            err=False, \
+            message='パスワードが違います', \
+            id=id )
+
+
+# logout
+@app.route('/logout', methods=['GET'])
+def logout():
+    session.pop('id', None)
+    session.pop('login')
+    return redirect('/login')
+
+
+
+
+リスト3-1――layout.html
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" 
+        href="{{url_for('static', filename='style.css')}}">
+</head>
+<body>
+    <h1>{% block headline %}{% endblock %}</h1>
+
+
+    {% block content %}{% endblock %}
+    
+    <div class="footer">
+        {% block footer %}{% endblock %}
+    </div>
+</body>
+</html>
+
+
+
+
+リスト3-2――index.html
+{% extends "layout.html" %}
+
+
+{% block title %}
+Index
+{% endblock %}
+
+
+{% block headline %}
+{{ title }}
+{% endblock %}
+
+
+{% block content %}
+<p>{{ message }}</p>
+{% endblock %}
+
+
+{% block footer %}
+copyright 2019 SYODA-Tuyano.
+{% endblock %}
+
+
+
+
+リスト3-3――app.pyに記述する関数
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Index', \
+        message='Hello! This is Bootstrap sample.', )
+
+
+（※リスト3-3は、app.pyの全リストではありません。インポート文やFlaskオブジェクトを作成する処理などは前章で作成したままで、index関数だけ書き換えます）
+
+
+
+
+リスト3-4――layout.htmlの修正
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" 
+        content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" 
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"d></script>
+</head>
+<body>
+    <div  class="container">
+        <h1 class="display-3">
+            {% block headline %}{% endblock %}
+        </h1>
+        <div>
+            {% block content %}{% endblock %}
+        </div>
+        <div class="text-right">
+            {% block footer %}{% endblock %}
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+</body>
+</html>
+
+
+
+
+リスト3-5
+<div class="row">
+    <p class="p-1 col">１つのコンテンツ</p>
+</div>
+<div class="row">
+    <p class="p-1 col">２つのコンテンツ</p>
+    <p class="p-1 col">２つのコンテンツ</p>
+</div>
+<div class="row">
+    <p class="p-1 col">３つのコンテンツ</p>
+    <p class="p-1 col">３つのコンテンツ</p>
+    <p class="p-1 col">３つのコンテンツ</p>
+</div>
+
+
+
+
+リスト3-6
+<div class="row">
+    <p class="p-1 col-6">２つのコンテンツ</p>
+    <p class="p-1 col-6">２つのコンテンツ</p>
+</div>
+<div class="row">
+    <p class="p-1 col-8">２つのコンテンツ</p>
+    <p class="p-1 col-4">２つのコンテンツ</p>
+</div>
+<div class="row">
+    <p class="p-1 col-10">２つのコンテンツ</p>
+    <p class="p-1 col-2">２つのコンテンツ</p>
+</div>
+
+
+
+
+リスト3-7
+<div class="row">
+    <p class="p-1 bg-light col-lg-10 col-md-8 col-sm-12">Aコンテンツ</p>
+    <p class="p-1 bg-light col-lg-2 col-md-4 col-sm-12">Bコンテンツ</p>
+</div>
+<hr>
+<div class="row">
+    <p class="p-1 bg-light col-lg-8 col-md-6 col-sm-12 col-12">Aコンテンツ</p>
+    <p class="p-1 bg-light col-lg-2 col-md-3 col-sm-6 col-12">Bコンテンツ</p>
+    <p class="p-1 bg-light col-lg-2 col-md-3 col-sm-6 col-12">Cコンテンツ</p>
+</div>
+
+
+
+
+リスト3-8
+<button class="m-1 btn">Button default</button>
+<button class="m-1 btn btn-primary">Button primary</button>
+<button class="m-1 btn btn-secondary">Button secondary</button>
+<button class="m-1 btn btn-success">Button success</button>
+<button class="m-1 btn btn-danger">Button danger</button>
+<button class="m-1 btn btn-warning">Button warning</button>
+<button class="m-1 btn btn-info">Button info</button>
+<button class="m-1 btn btn-light">Button light</button>
+<button class="m-1 btn btn-dark">Button dark</button>
+<button class="m-1 btn btn-link">Button link</button>
+
+
+
+
+リスト3-9
+<div class="form-group">
+    <label for="name">Name</label>
+    <input type="text" class="form-control" 
+        id="name" placeholder="Enter name">
+</div>
+<div class="form-group">
+    <label for="pass">Password</label>
+    <input type="password" class="form-control" 
+        id="pass" placeholder="Enter password">
+</div>
+<div class="form-row">
+    <div class="form-group col">
+        <label for="mail">Mail</label>
+        <input type="email" class="form-control" 
+            id="mail" placeholder="Enter mail address">
+    </div>
+    <div class="form-group col">
+        <label for="tel">Tel</label>
+        <input type="text" class="form-control" 
+            id="tel" placeholder="Enter phone number">
+    </div>
+</div>
+<div class="form-group">
+    <input type="submit" 
+        class="form-control btn btn-primary">
+</div>
+
+
+
+
+リスト3-10
+<div class="m-1 btn-group-toggle" data-toggle="buttons">
+    <label class="btn btn-primary active">
+        <input type="checkbox" checked> Checkbox
+    </label>
+</div>
+<div class="m-1 btn-group btn-group-toggle" data-toggle="buttons">
+    <label class="btn btn-primary active">
+        <input type="radio" name="options" id="r1" checked>Radio 1
+    </label>
+    <label class="btn btn-primary">
+        <input type="radio" name="options" id="r2" >Radio 2
+    </label>
+    <label class="btn btn-primary">
+        <input type="radio" name="options" id="r3" >Radio 3
+    </label>
+</div>
+
+
+
+
+リスト3-11
+<div class="form-group">
+    <label for="sel1">Select 1</label>
+    <select class="form-control" id="sel1">
+        <option>Windows</option>
+        <option>macOS</option>
+        <option>Linux</option>
+        <option>ChromeOS</option>
+    </select>
+</div>
+<div class="form-group">
+    <label for="sel2">Select 2</label>
+    <select class="form-control" id="sel1"  size="5">
+        <option>Windows</option>
+        <option>macOS</option>
+        <option>Linux</option>
+        <option>ChromeOS</option>
+    </select>
+</div>
+
+
+
+
+リスト3-12
+{% if flg == None %}
+<div class="alert alert-light" role="alert">
+{% elif flg %}
+<div class="alert alert-primary" role="alert">
+{% else %}
+<div class="alert alert-danger" role="alert">
+{% endif %}
+{{ alert }}
+    <button type="button" class="close" 
+            data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<form method="post" action="/">
+    <div class="form-group">
+        <label for="sel1">select your platform:</label>
+        <select class="form-control" id="sel1" 
+                name="platform">
+            <option>Windows</option>
+            <option>macOS</option>
+            <option>Linux</option>
+            <option>ChromeOS</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <input type="submit">
+    </div>      
+</form>
+
+
+
+
+リスト3-13
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Index', \
+        message='※UI関係について', 
+        flg=None,
+        alert='※フォームを送信して下さい。')
+
+
+@app.route('/', methods=['POST'])
+def form():
+    pf = request.form.get('platform')
+    if pf in ['Windows', 'macOS']:
+        flg = True
+        alert = 'OK! 問題ありません。'
+    else:
+        flg = False
+        alert = 'すみません。 %s は対応していません...' % pf
+    return render_template('index.html', \
+        title='Index', \
+        message='※UI関係について', 
+        flg=flg,
+        alert=alert)
+
+
+
+
+リスト3-14
+<div class="alert alert-primary" id="alert">
+    ※これは、スクリプトで表示をON/OFFするサンプルです。
+</div>
+<button class="btn btn-primary" onclick="$('#alert').show();">Show</button>
+<button class="btn btn-primary" onclick="$('#alert').hide();">Hide</button>
+
+
+
+
+リスト3-15
+<div class="modal fade" id="dlog">
+    <div class="modal-dialog" role="document">
+        <div class="alert alert-primary" role="alert">
+            アラートを表示する。
+        </div>                
+    </div>
+</div>
+
+
+<button type="button" class="btn btn-primary"
+        data-toggle="modal" data-target="#dlog">
+    Modal Dialog!
+</button>
+
+
+
+
+リスト3-16
+<div class="modal fade" id="dlog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                ※注目！
+                </h3>
+            </div>
+            <div class="modal-body">
+                <h6>これは、モーダルダイアログです。</h6>
+                <div>
+                    <input type="text" id="txt" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" 
+                        class="btn btn-primary"
+                        data-dismiss="modal" 
+                        onclick="doAction();">
+                    OK
+                </button>
+                <button type="button" 
+                        class="btn btn-primary"
+                        data-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<button type="button" class="btn btn-primary"
+        data-toggle="modal" data-target="#dlog">
+    Modal Dialog!
+</button>
+<script>
+function doAction() {
+    var val = $('#txt').val();
+    $('#msg').text('「' + val + '」と入力しました。');
+}
+</script>
+
+
+
+
+リスト3-17
+<div class="card" style="width: 18rem;">
+    <div class="card-body">
+        <h5 class="card-title">サンプルカード</h5>
+    </div>
+    <img class="card-img" src="/static/image.jpg">
+    <div class="card-body">
+        <p class="card-text">
+            これは、カードレイ・アウトのサンプルです。
+            ここにコンテンツの本文を記述して表示します。
+        </p>
+    </div>
+</div>
+
+
+
+
+リスト3-18
+<div class="jumbotron">
+    <h1 class="display-1">Jumbotron!</h1>
+    <p class="lead">This is sample Jumbotron!</p>
+    <hr>
+    <p>
+        これは、ジャンボトロンのサンプルです。
+        大きくて目立つコンテンツを表示するのに最適です。
+    </p>
+</div>
+
+
+
+
+リスト3-19
+<ul class="list-group">
+    <li class="list-group-item active">Windows</li>
+    <li class="list-group-item">macOS</li>
+    <li class="list-group-item disabled">Linux</li>
+    <li class="list-group-item">Chrome OS</li>
+</ul>
+
+
+
+
+リスト3-20
+<div class="list-group">
+    <a class="list-group-item list-group-item-action"
+            href="#">Windows</a>
+    <a class="list-group-item list-group-item-action"
+            href="#">macOS</a>
+    <a class="list-group-item list-group-item-action"
+            href="#">Linux</a>
+    <a class="list-group-item list-group-item-action"
+            href="#">Chrome OS</a>
+</div>
+
+
+
+
+リスト3-21
+<div class="list-group">
+    <a class="list-group-item list-group-item-action list-group-item-primary"
+            href="#">Windows</a>
+    <a class="list-group-item list-group-item-action list-group-item-danger"
+            href="#">macOS</a>
+    <a class="list-group-item list-group-item-action list-group-item-warning"
+            href="#">Linux</a>
+    <a class="list-group-item list-group-item-action list-group-item-info"
+            href="#">Chrome OS</a>
+</div>
+
+
+
+
+リスト3-22
+<table class="table">
+<thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Mail</th>
+        <th>Age</th>
+    </tr>
+</thead>
+<tbody>
+    <tr>
+        <th>1</th>
+        <td>Taro</td>
+        <td>taro@yamada</td>
+        <td>39</td>
+    </tr>
+    <tr>
+        <th>2</th>
+        <td>Hanako</td>
+        <td>hanako@flower</td>
+        <td>27</td>
+    </tr>
+    <tr>
+        <th>3</th>
+        <td>Sachiko</td>
+        <td>sachico@happy</td>
+        <td>43</td>
+    </tr>
+</tbody>
+</table>
+
+
+
+
+リスト3-23
+<table class="table table-striped">
+<thead class="thead-dark">
+
+
+
+
+リスト3-24
+<a class="m-2 btn btn-primary" data-toggle="collapse" 
+    href="#collapse" role="button">
+    コラプスをON/OFFする
+</a>
+<div class="m-2 collapse" id="collapse">
+    <div class="alert alert-primary">
+        ※これは、コラプスで表示されるコンテンツです。<br>
+        このように表示を簡単にON/OFFできます。
+    </div>
+</div>
+
+
+
+
+リスト3-25
+<!-- 切り替えタブ部分 -->
+<ul class="nav nav-tabs" role="tablist">
+    <!-- １つ目のタブ -->
+    <li class="nav-item">
+        <a class="nav-link active" href="#home"
+            data-toggle="tab" role="tab">Home</a>
+    </li>
+    <!-- ２つ目のタブ -->
+    <li class="nav-item">
+        <a class="nav-link" href="#middle"
+            data-toggle="tab" role="tab">Middle</a>
+    </li>
+    <!-- ３つ目のタブ -->
+    <li class="nav-item">
+        <a class="nav-link"  href="#finish"
+            data-toggle="tab" role="tab">Finish</a>
+    </li>
+</ul>
+
+
+<!-- コンテンツ部分 -->
+<div class="tab-content">
+    <!-- １つ目のコンテンツ -->
+    <div class="tab-pane fade show active" id="home" 
+            role="tabpanel">
+        ※これは、ホームページのコンテンツです。<br><br>
+        上のリンクで切り替え表示できます。
+    </div>
+    <!-- ２つ目のコンテンツ -->
+    <div class="tab-pane fade" id="middle" 
+            ole="tabpanel">
+        ※これは、中央のページのコンテンツです。<br><br>
+        <div class="alert alert-primary">
+            ※中央のページを表示しています。
+        </div>
+    </div>
+    <!-- ３つ目のコンテンツ -->
+    <div class="tab-pane fade" id="finish" 
+            role="tabpanel">
+        ※これは、最後のページのコンテンツです。<br><br>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Card</h5>
+                <p class="card-text">
+                    ※サンプルとして用意したカードです。
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+リスト3-26――layout.html
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" 
+        content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" 
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"d></script>
+</head>
+<body>
+    <div  class="container">
+        <h1 class="display-4 mb-4">
+            {% block headline %}{% endblock %}
+        </h1>
+        <div>
+            {% block content %}{% endblock %}
+        </div>
+        <div class="text-right mt-3">
+            {% block footer %}{% endblock %}
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+</body>
+</html>
+
+
+ Bootstrap関係の<link>と<script>が追加されています。また、<body>内全体を<div  class="container">タグで囲み、headlineとfooterのブロック部分にはそれぞれクラスを追加して表示スタイルを設定してあります。
+
+
+
+
+リスト3-27――login.htmlのcontent ブロック部分
+{% block content %}
+{% if err %}
+<p class="alert alert-warning">
+{% else %}
+<p class="alert alert-light">
+{% endif %}
+{{ message }}</p>
+
+
+<div class="card">
+    <div class="card-header">
+        <h4 class="card-title">
+            Login form:
+        </h4>
+    </div>
+    <div class="card-body">
+        <form method="post" aciton="/login">
+        <div class="form-group">
+            <label for="id">id</label>
+            <input type="text"  class="form-control" 
+                id="id" name="id" value="{{id}}">
+            <small class="form-text text-muted">
+                ※IDを入力（未登録の場合は新たに登録したいIDを記入）
+            </small>
+        </div>
+        <div class="form-group">
+            <label for="pass">password</label>
+            <input type="password"  class="form-control" 
+                id="pass" name="pass">
+            <small class="form-text text-muted">
+                ※パスワードを入力（未登録の場合は新たに登録するパスワードを記入）
+            </small>
+        </div>
+        <div class="form-group">
+            <input type="submit" value="Login">
+        </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+リスト3-28――messages.htmlのcontent ブロック部分
+{% block content %}
+<div class="text-right h6">
+    <a href="/logout">Logout</a>
+</div>
+<div class="alert alert-success p-1">
+    <h5>{{ message }}</h5>
+</div>
+
+
+<!-- 切り替えタブ部分 -->
+<ul class="nav nav-tabs" role="tablist">
+    <!-- 1つ目のタブ -->
+    <li class="nav-item">
+        <a class="nav-link active" href="#msgs"
+            data-toggle="tab" role="tab">Messages</a>
+    </li>
+    <!-- 2つ目のタブ -->
+    <li class="nav-item">
+        <a class="nav-link" href="#frms"
+            data-toggle="tab" role="tab">Form</a>
+    </li>
+</ul>
+    
+<!-- コンテンツ部分 -->
+<div class="tab-content">
+    <!-- 1つ目のコンテンツ -->
+    <div class="tab-pane fade show active" id="msgs" 
+            ole="tabpanel">
+        <h5 class="p-3 h5 text-center">
+            * Posted Messages *
+        </h5>
+        <ul class="list-group list-group-flush">
+            {% for item in data | reverse %}
+            <li class="list-group-item">
+                {{item[1]}} ({{item[0]}})
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+<!-- 2つ目のコンテンツ -->
+<div class="tab-pane fade" id="frms" 
+        role="tabpanel">
+    <h5 class="mt-4">
+        Post your message:
+    </h5>
+    <div class="card mt-4">
+        <div class="card-body">
+            <form method="post" aciton="/">
+            <div class="form-group ">
+                <label for="comment">Message</label>
+                <div class="row">
+                <input type="text" class="form-control col" 
+                    id="comment" name="comment">
+                <input class="btn btn-primary col-3 col-sm-3 col-md-2 col-lg-2 col-xl-2" 
+                    type="submit" value="POST NOW!">
+                </div>
+            </div>
+            </form>
+        </div>
+    </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+
+
+
+リスト4-1
+<!doctype html>
+<html lang="ja">
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" 
+        content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" 
+        href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+</head>
+<body class="">
+    <div  class="container">
+        <h1 class="display-3">
+            {% block headline %}{% endblock %}
+        </h1>
+        <div>
+            {% block content %}{% endblock %}
+        </div>
+        <div class="text-right">
+            {% block footer %}{% endblock %}
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+</body>
+</html>
+
+
+
+
+リスト4-2
+{% block content %}
+<div class="mb-3" id="msg">{{ message }}</div>
+
+
+<!-- Vue.js container -->
+{% raw %}
+<div id="app" class="m-5">
+    <h2>{{vue_msg}}</h2>
+</div>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// start Vue.
+new Vue({
+    el:'#app',
+    data: {
+        vue_msg: 'This is Vue.js!!'
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+リスト4-3
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Index', \
+        message='※Vue.js' )
+
+
+
+
+リスト4-4
+{% block content %}
+<div class="mb-3" id="msg">{{ message }}</div>
+
+
+<!-- Vue.js container -->
+<div id="app" class="m-5">
+    <mycomp />
+</div>
+
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <p class="alert alert-primary h5">
+        Hello! This is My-Component!
+    </p>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+});
+
+
+// start Vue.
+new Vue({
+    el:'#app',
+});
+</script>
+{% endblock %}
+
+
+
+
+リスト4-5
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <p class="alert alert-primary h5">
+            {{msg}}
+        </p>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data:function(){
+        return { msg: "This is Mycomp-component!" };
+    }
+});
+……以下略……
+
+
+
+
+リスト4-6
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Index', \
+        message='※Vue.js',
+        data="['one', 'two', 'three']")
+
+
+
+
+リスト4-7
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <p class="alert alert-primary h5">
+            Hello! This is My-Component!
+        </p>
+        <ul class="list-group">
+            <li  class="list-group-item list-group-item-warning h5">
+                * data list *
+            </li>
+            <li v-for="item in data" class="list-group-item">
+            {{ item }}
+            </li>
+        </ul>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+var d = eval({{data|tojson}});
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data:function(){ return {data: d }; }
+});
+……以下略……
+
+
+
+
+リスト4-8
+<!-- Vue.js container -->
+<div id="app" class="m-5">
+    <mycomp name="Hanako" 
+        msg="This is my first message. hum..."/>
+</div>
+
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div class="alert alert-primary">
+        <p class="h5">
+            Hi! I'm {{name}}.
+        </p>
+        <p>{{msg}}</p>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    props:[ 'name', 'msg' ],
+});
+……以下略……
+
+
+
+
+リスト4-9
+<!-- Vue.js container -->
+<div id="app" class="m-5">
+    <mycomp name="Hanako" f="true"
+        msg="This is my first message. hum..."/>
+</div>
+
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div v-if="flg=='true" class="alert alert-primary">
+        <p class="h5">
+            Hi! I'm {{name}}.
+        </p>
+        <p>{{msg}}</p>
+    </div>
+    <div v-else class="alert alert-danger">
+        <p class="h6">
+            oh... I'm not {{name}}...
+        </p>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    props: ['name', 'msg', 'f'] ,
+    data: function(){
+        return { flg: this.f.toLowerCase() }
+    }
+});
+……以下略……
+
+
+
+
+リスト4-10
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <template v-if="flg=='true'">
+        <div class="alert alert-primary">
+            <p class="h5">
+                Hi! I'm {{name}}.
+            </p>
+            <p>{{msg}}</p>
+        </div>
+    </template>
+    <template v-else>
+        <div class="alert alert-danger">
+            <p class="h6">
+                oh... I'm not {{name}}...
+            </p>
+        </div>
+    </template>
+</script>
+{% endraw %}
+
+
+
+
+リスト4-11
+<!-- Vue.js container -->
+<div id="app" class="m-5">
+    <mycomp />
+</div>
+
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <ul class="list-group">
+        <template v-for="item in data">
+            <li class="list-group-item">
+                {{item.name}} [ {{item.mail}}, {{item.age}} ]
+            </li>
+        </template>
+    </ul>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    props: ['name', 'msg', 'f'] ,
+    data: function(){
+        return {
+            data:[
+                {name:'Taro', mail:'taro@yamada', age:39},
+                {name:'Hanako', mail:'hanako@flower', age:28},
+                {name:'Sachiko', mail:'sachico@happy', age:17}
+            ]
+         }
+    }
+});
+……以下略……
+
+
+
+
+リスト4-12
+<!-- Vue.js container -->
+<div id="app" class="m-5">
+    <mycomp kind="0" />
+</div>
+
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div v-bind:class="'h5 alert alert-' + data[kind]">
+        This is {{data[kind]}} alert!!
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    props: ['kind'] ,
+    data: function(){
+        return {
+            kind:this.kind,
+            data:['primary', 'secondary', 
+                'danger', 'warning', 'info']
+         }
+    }
+});
+……以下略……
+
+
+
+
+リスト4-13
+<!-- Vue.js container -->
+<div id="app" class="m-3">
+    <mycomp />
+</div>
+
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div v-if="msg == ''"
+            class="'h5 alert alert-light">
+           please input your message:
+        </div>
+        <div v-else
+            class="'h5 alert alert-primary">
+           you said: "{{msg}}""
+        </div>
+        <div class="form-group">
+            <label for="msg">Message</label>
+            <input type="text"  class="form-control" 
+                id="msg" v-model="msg">
+        </div>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function(){
+        return {
+            msg:''
+         };
+    }
+});
+……以下略……
+
+
+
+
+リスト4-14
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div v-if="flg == false"
+            class="'h5 alert alert-light">
+           please input your message:
+        </div>
+        <div v-else
+            class="'h5 alert alert-primary">
+            {{alert}}
+        </div>
+        <div class="form-group">
+            <label for="msg">Message</label>
+            <div  class="row">
+                <input type="text"  class="form-control col" 
+                id="msg" v-model="msg">
+                <button v-on:click="action" class="col-2">
+                    Click</button>
+            </div>
+        </div>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function(){
+        return {
+            flg:false,
+            msg:'',
+            alert:'please type message:'
+         };
+    },
+    methods:{
+        action:function(e) {
+            if (this.msg == '') {
+                this.alert = 'please type message:';
+                this.flg = false;
+            } else {
+                this.alert = 'your typed: ' + this.msg;
+                this.flg = true;
+            }
+        }
+    }
+});
+……以下略……
+
+
+
+
+リスト4-15
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div v-bind:class="{alert:true, 'alert-primary':primary, 'alert-light':light}"
+            v-bind:style="{'font-weight':bold, 'font-size':size}">
+            {{msg}}
+        </div>
+        <div class="form-group">
+            <label for="msg">Alert style:</label>
+            <select class="form-control"
+                v-model="kind" v-on:change="action">
+                <option>primary</option>
+                <option>light</option>
+            </select>
+        </div>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function(){
+        return {
+            kind:'',
+            bold:false,
+            size:'16pt',
+            primary:false,
+            light:true,
+            msg:'select alert style:',
+         };
+    },
+    methods:{
+        action:function(e) {
+            if (this.kind == 'primary') {
+                this.bold = true;
+                this.size = '20pt';
+                this.primary = true;
+                this.light = false;
+                this.msg = 'Primary alert!';           
+            } else {
+                this.bold = false;
+                this.size = '16pt';
+                this.primary = false;
+                this.light = true;
+                this.msg = 'Light alert...';            
+            }
+        }
+    }
+});
+……以下略……
+
+
+
+
+リスト4-16
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="alert alert-info h5">
+            Total: {{total}}
+        </div>
+        <div class="form-group">
+            <label for="id">Number:</label>
+            <input type="number"  class="form-control" 
+                id="num" name="num" v-model="num">
+        </div>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function(){
+        return { 
+            num: 0 
+        };
+    },
+    computed:{
+        total: function() {
+            var re = 0;
+            for (var i = 1;i <= this.num;i++) {
+                re += i;
+            }
+            return re;
+        }
+    }
+});
+……以下略……
+
+
+
+
+リスト4-17
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="form-group">
+            <label for="item">Number:</label>
+            <input type="text"  class="form-control" 
+                id="item" name="item" v-model="items">
+        </div>
+        <ol class="list-group" v-for="item in itemlist">
+            <li class="list-group-item">{{item}}</li>
+        </ol>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function(){
+        return { 
+            itemlist:[] 
+        };
+    },
+    computed:{
+        items: {
+            set:function(val) {
+                this.itemlist = val.split(',');
+            },
+            get:function() {
+                return this.itemlist.join(',')
+            }
+        }
+    }
+});
+
+
+
+
+リスト4-18
+<!-- Vue.js container -->
+<div id="app" class="m-3">
+    {% raw %}
+    <mycomp>
+        <h5 slot="header">Hello!</h5>
+        <div slot="content">
+            <p>これは、スロットのサンプルです。</p>
+            <small>This is slot sample.</small>
+        </div>
+    </mycomp>
+    {% endraw %}
+</div>
+    
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <slot name="header" />
+            </div>
+            <div class="card-body">
+                <slot name="content" />
+            </div>
+        </div>                
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+});
+
+
+
+
+リスト4-19
+@app.route('/ajax/<id>', methods=['GET'])
+def ajax(id):
+    data = {
+        1:{'id':1, 'name':'Taro', 'mail':'taro@yamada'},
+        2:{'id':2, 'name':'Hanako', 'mail':'hanako@flower'},
+        3:{'id':3, 'name':'Sachiko', 'mail':'sachico@happy'}
+    }
+    n = int(id)
+    if n < 1:
+        n = 1
+    if n > len(data):
+        n = 3
+    return jsonify(data[n]);
+
+
+（※flaskのインポート文を以下のように修正しておく。
+from flask import Flask, render_template, request, session, redirect, jsonify）
+
+
+
+
+リスト4-20
+<!-- Vue.js container -->
+<div id="app" class="m-3">
+    {% raw %}
+    <mycomp/>
+    {% endraw %}
+</div>
+    
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="alert alert-info">
+            <h5>{{title}}</h5>
+            <p>{{data}}</p>
+        </div>
+        <div>
+            <select class="form-control" v-model="num" 
+                    v-on:change="action">
+                <option>1</option>
+                <option>2</option>
+                <option>3</option>
+            </select>
+        </div>
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+// mycomp object
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            title:'Ajax data',
+            data: 'wait...',
+            num:0,
+        }
+    },
+    methods:{
+        action: function(e) {
+            let self = this;
+            $.get("/ajax/" + this.num, function(data) {
+                self.data = data.id + ':' + data.name 
+                    + ' [' + data.mail + ']';
+            });
+        }
+    }
+});
+
+
+
+
+リスト4-21
+from flask import Flask, render_template, request, session, redirect, jsonify
+import pickle
+
+
+app = Flask(__name__)
+app.secret_key = b'random string...'
+
+
+member_data = {}
+message_data = []
+member_data_file = 'member_data.dat'
+message_data_file = 'message_data.dat'
+
+
+# load member_data from file.
+try:
+    with open(member_data_file, "rb") as f:
+        list = pickle.load(f)
+        if list != None:
+            member_data = list
+except:
+    pass
+
+
+# load message_data from file.
+try:
+    with open(message_data_file, "rb") as f:
+        list = pickle.load(f)
+        if list != None:
+            message_data = list
+except:
+    pass
+
+
+# access top page.
+@app.route('/', methods=['GET'])
+def index():
+    global message_data
+    return render_template('messages.html', \
+        login=False, \
+        title='Messages', \
+        message='not logined...', 
+        data=message_data )
+
+
+# post message.
+@app.route('/post', methods=['POST'])
+def postMsg():
+    global message_data
+    id = request.form.get('id')
+    msg = request.form.get('comment')
+    message_data.append((id, msg))
+    if len(message_data) > 25:
+        message_data.pop(0)
+    try:
+        with open(message_data_file, 'wb') as f:
+            pickle.dump(message_data, f)
+    except:
+        pass
+    return 'True'
+
+
+# get messages.
+@app.route('/messages', methods=['POST'])
+def getMsg():
+    global message_data
+    return jsonify(message_data)
+
+
+# login form sended.
+@app.route('/login', methods=['POST'])
+def login_post():
+    global member_data, message_data
+    id = request.form.get('id')
+    pswd = request.form.get('pass')
+    if id in member_data:
+        if pswd == member_data[id]:
+            flg = 'True'
+        else:
+            flg = 'False'
+    else:
+        member_data[id] = pswd
+        flg = 'True'
+        try:
+            with open(member_data_file, 'wb') as f:
+                pickle.dump(member_data, f)
+        except:
+            pass
+    return flg
+    
+
+
+リスト4-22
+{% block content %}
+<!-- Vue.js container -->
+<div id="app" class="m-3">
+    <message_board />
+</div>
+
+
+<!-- ********************** -->
+<!-- * Component Template * -->
+<!-- ********************** -->
+
+
+{% raw %}
+<script type="text/x-template" id="message_board-template">
+<div>
+
+
+<div class="text-right h6">
+    <a href="javascript:void(0)" 
+        v-on:click="in_out_check">{{in_out}}</a>
+</div>
+
+
+<div class="alert alert-success p-1">
+    <h5>{{ alert_msg }}</h5>
+</div>
+
+
+<!-- Tab Panel -->
+<ul class="nav nav-tabs" role="tablist">
+    <!-- 1つ目のタブ -->
+    <li class="nav-item">
+        <a class="nav-link active" href="#msgs" id="msg_tab_link"
+            data-toggle="tab" role="tab">Messages</a>
+    </li>
+    <!-- 2つ目のタブ -->
+    <li class="nav-item">
+        <a class="nav-link" href="#frms" id="frm_tab_link"
+            data-toggle="tab" role="tab">Form</a>
+    </li>
+</ul>
+    
+<!-- Tab Contents -->
+<div class="tab-content">
+    <!-- First Tab -->
+    <div class="tab-pane fade show active" id="msgs" 
+            ole="tabpanel" >
+        <div  v-if="login_flg">
+            <h5 class="p-3 h5 text-center">
+                * Posted Messages *
+            </h5>
+            <ul class="list-group list-group-flush">
+                <li v-for="item in msg_data"
+                        class="list-group-item">
+                    {{item[1]}} ({{item[0]}})
+                </li>
+            </ul>
+        </div>
+    </div>
+    <!-- Second Tab -->
+    <div class="tab-pane fade" id="frms" 
+            role="tabpanel">
+        <div  v-if="login_flg">
+            <h5 class="mt-4">
+                Post your message:
+            </h5>
+            <div class="card mt-4">
+                <div class="card-body">
+                    <div class="form-group ">
+                        <label for="comment">Message</label>
+                        <div class="row">
+                        <input type="text" class="form-control col" 
+                            id="comment" name="comment" v-model="post_msg">
+                        <button v-on:click="postMsg"
+                            class="btn btn-primary col-3 col-sm-3 col-md-2 col-lg-2 col-xl-2">
+                            POST NOW!</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Login Dialog -->
+<div class="modal fade" id="login">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        {{login_msg}}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="id">id</label>
+                        <input type="text"  class="form-control" 
+                            id="id" name="id" v-model="form_id">
+                        <small class="form-text text-muted">
+                            ※IDを入力（未登録の場合は新たに登録したいIDを記入）
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="pass">password</label>
+                        <input type="password"  class="form-control" 
+                            id="pass" name="pass" v-model="form_pass">
+                        <small class="form-text text-muted">
+                            ※パスワードを入力（未登録の場合は新たに登録するパスワードを記入）
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" 
+                            v-on:click="login">login</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+</div>
+</script>
+{% endraw %}
+
+
+<!-- ******************** -->
+<!-- * Component Script * -->
+<!-- ******************** -->
+
+
+<script>
+// message_board object
+Vue.component('message_board', {
+    template: '#message_board-template',
+    data: function() {
+        return {
+            in_out:'login',
+            login_flg:false, login_id:'',
+            form_id:'', form_pass:'',
+            login_msg:'Login form:',
+            alert_msg:'※ログインして下さい。',
+            post_msg:'',
+            msg_data:[],
+        }
+    },
+    methods:{
+        // check login/logout.
+        in_out_check: function(e) {
+            if (this.login_flg) {
+                this.logout();
+            } else {
+                this.show_login();
+            }
+        },
+        //show login dialog
+        show_login: function() {
+            this.form_id = '';
+            this.form_pass = '';
+            this.login_msg = 'Login Form:';
+            $('#login').modal('show');
+        },
+        // access server and logined.
+        login: function(e) {
+            let formData = new FormData();
+            formData.append("id", this.form_id);
+            formData.append("pass", this.form_pass);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/login',
+                data: formData,
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    if (data == 'True'){
+                        self.in_out = 'logout';
+                        self.login_flg = true;
+                        self.login_id = self.form_id;
+                        self.alert_msg = '※ログインしました！';
+                        self.form_id = '';
+                        self.form_pass = '';
+                        $('#login').modal('hide');
+                        self.getMsg();
+                    } else {
+                        self.login_msg = 'パスワードが違います。';
+                        self.pass = '';
+                    }
+                },
+                error: function(request, status, err) {
+                    self.login_msg = '※問題が発生しました。';
+                }
+            });
+        },
+        // logout.
+        logout: function() {
+            console.log('logout');
+            this.in_out = 'login';
+            this.msg_data = [];
+            this.login_flg = false;
+            this.login_id = '';
+            this.alert_msg = '※ログアウトしました。'
+        },
+        // post message.
+        postMsg: function() {
+            let formData = new FormData();
+            formData.append("id", this.login_id);
+            formData.append("comment", this.post_msg);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/post',
+                data: formData,
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    if (data == 'True') {
+                        self.alert_msg = '※メッセージを送信しました。'
+                        self.getMsg();
+                    }
+                },
+                error: function(request, status, err) {
+                    self.alert_msg = '※メッセージ送信に問題が発生しました。';
+                }
+            });
+        },
+        // get all messages.
+        getMsg: function() {
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/messages',
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    console.log(data);
+                    self.msg_data = data.reverse();
+                    self.post_msg = '';
+                    $('#msg_tab_link').tab('show');
+                },
+                error: function(request, status, err) {
+                    self.alert_msg = '※メッセージ送信に問題が発生しました。';
+                }
+            });
+        }
+    },
+});
+
+
+// start Vue.
+new Vue({
+    el:'#app',
+});
+</script>
+{% endblock %}
+
+
+
+
+リスト5-1
+# get Database Object.
+def get_db():
+    if 'db' not in g:
+        g.db = sqlite3.connect('sample.sqlite3')
+    return g.db
+
+
+# close Dataabse Object.
+def close_db(e=None):
+    db = g.pop('db', None)
+
+
+    if db is not None:
+        db.close()
+
+
+（※from flask import の最後に g を追加しておくこと）
+（※import sqlite3 を冒頭に追加しておくこと）
+
+
+
+
+リスト5-2
+@app.route('/', methods=['GET'])
+def index():
+    mydata = []
+    db = get_db()
+    cur = db.execute("select * from mydata")
+    mydata = cur.fetchall()
+    return render_template('index2.html', \
+        title='Index', \
+        message='※SQLite3 Database',
+        alert='This is SQLite3 Database Sample!',
+        data=mydata)
+
+
+
+
+リスト5-3
+{% block content %}
+<div class="mb-3" id="msg">{{ message }}</div>
+
+
+<div id="app" class="m-3">
+    <div>
+        <div class="alert alert-info">
+            <h5>{{alert}}</h5>
+        </div>
+        <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Mail</th>
+                <th>Age</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+            <tr>
+                <th>{{item[0]}}</th>
+                <td>{{item[1]}}</td>
+                <td>{{item[2]}}</td>
+                <td>{{item[3]}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>     
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+リスト5-4
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Index', \
+        message='※SQLite3 Database',
+        alert='This is SQLite3 Database Sample!')
+
+
+@app.route('/ajax', methods=['GET'])
+def ajax():
+    db = get_db()
+    cur = db.execute("select * from mydata")
+    mydata = cur.fetchall()
+    return jsonify(mydata);
+
+
+
+
+リスト5-5
+{% block content %}
+<div class="mb-3" id="msg">{{ message }}</div>
+
+
+<!-- Vue.js container -->
+<div id="app" class="m-3">
+    <mycomp/>
+</div>
+
+
+<!-- mycomp's template -->
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="alert alert-info">
+            <h5>{{alert}}</h5>
+        </div>
+        <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Mail</th>
+                <th>Age</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="item in data">
+                <th>{{item[0]}}</th>
+                <td>{{item[1]}}</td>
+                <td>{{item[2]}}</td>
+                <td>{{item[3]}}</td>
+            </tr>
+        </tbody>
+        </table>     
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            alert:'This is SQLite3 Database sample.',
+            data: [(-1,'wait...','','')]
+        }
+    },
+    methods:{
+        getdata: function() {
+            let self = this;
+            $.get("/ajax", function(data) {
+                self.data = eval(data);
+            });
+        },
+    },
+    created: function() {
+        this.getdata();
+    }
+});
+……以下略……
+
+
+
+
+リスト5-6
+@app.route('/<id>', methods=['GET'])
+def index(id):
+    return render_template('index.html', \
+        title='Index', \
+        message='※SQLite3 Database',
+        id=id,
+        alert='This is SQLite3 Database Sample!')
+
+
+@app.route('/ajax/<id>', methods=['GET'])
+def ajax(id):
+    db = get_db()
+    cur = db.execute("select * from mydata where id={id}".format(id=id))
+    mydata = cur.fetchall()
+    return jsonify(mydata);
+  
+
+
+リスト5-7
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            id:{{id}},
+            alert:'This is SQLite3 Database sample.',
+            data: [(-1,'wait...','','')],
+        }
+    },
+    methods:{
+        getdata: function() {
+            let self = this;
+            $.get("/ajax/" + this.id, function(data) {
+                self.data = eval(data);
+            });
+        },
+    },
+    created: function() {
+        this.getdata();
+    }
+});
+
+
+
+
+リスト5-8
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
+
+
+
+
+リスト5-9
+engine = create_engine('sqlite:///sample.sqlite3')
+
+
+
+
+リスト5-10
+Base = declarative_base()
+
+
+
+
+リスト5-11
+# model class
+class Mydata(Base):
+    __tablename__ = 'mydata'
+ 
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+    mail = Column(String(255))
+    age = Column(Integer)
+
+
+    # get Dict data
+    def toDict(self):
+        return {
+            'id':int(self.id), 
+            'name':str(self.name), 
+            'mail':str(self.mail), 
+            'age':int(self.age)
+        }
+
+
+# get List data
+def getByList(arr):
+    res = []
+    for item in arr:
+        res.append(item.toDict())
+    return res
+
+
+# get all mydata record
+def getAll():
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    res = ses.query(Mydata).all()
+    ses.close()
+    return res
+
+
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', \
+        title='Index', \
+        message='※SQLite3 Database',
+        alert='This is SQLite3 Database Sample!')
+
+
+@app.route('/ajax', methods=['GET'])
+def ajax():
+    mydata = getAll()
+    return jsonify(getByList(mydata));
+
+
+
+
+リスト5-12
+<tbody>
+    <tr v-for="item in data">
+        <th>{{item.id}}</th>
+        <td>{{item.name}}</td>
+        <td>{{item.mail}}</td>
+        <td>{{item.age}}</td>
+    </tr>
+</tbody>
+
+
+
+
+リスト5-13
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            alert:'This is SQLite3 Database sample.',
+            data: [(-1,'wait...','','')]
+        }
+    },
+    methods:{
+        getdata: function() {
+            let self = this;
+            $.get("/ajax", function(data) {
+                self.data = eval(data);
+            });
+        },
+    },
+    created: function() {
+        this.getdata();
+    }
+});
+
+
+
+
+リスト5-14
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="alert alert-info">
+            <h5>{{alert}}</h5>
+        </div>
+        <div class="form-group">
+            <label for="id">Name</label>
+            <input type="text" class="form-control" 
+                id="name" v-model="f_name">
+        </div>
+        <div class="form-group">
+            <label for="mail">Mail</label>
+            <input type="email"  class="form-control" 
+                id="mail" v-model="f_mail">
+        </div>
+        <div class="form-group">
+            <label for="age">Age</label>
+            <input type="number"  class="form-control" 
+                id="age" v-model="f_age">
+        </div>            
+        <div class="form-group">
+            <button class="btn btn-primary"
+                v-on:click="action">Add</button>
+        </div>
+        <hr>
+        <table class="table">
+        <thead><tr>
+              <th>ID</th><th>Name</th>
+              <th>Mail</th><th>Age</th>
+          </tr></thead>
+        <tbody>
+            <tr v-for="item in data">
+                <th>{{item.id}}</th>
+                <td>{{item.name}}</td>
+                <td>{{item.mail}}</td>
+                <td>{{item.age}}</td>
+            </tr>
+        </tbody>
+        </table>     
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            f_name: '', f_mail: '', f_age: 0,
+            alert:'This is SQLite3 Database sample.',
+            data: [(-1,'wait...','','')]
+        }
+    },
+    methods:{
+        getdata: function() {
+            let self = this;
+            $.get("/ajax", function(data) {
+                self.data = eval(data).reverse();
+            });
+        },
+        action: function() {
+            let formData = new FormData();
+            formData.append("name", this.f_name);
+            formData.append("mail", this.f_mail);
+            formData.append("age", this.f_age);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/form',
+                data: formData,
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    self.f_name = '';
+                    self.f_mail = '';
+                    self.f_age = 0;
+                    self.getdata();
+                },
+                error: function(request, status, err) {
+                    console.log(err);
+                }
+            });
+        }
+    },
+    created: function() {
+        this.getdata();
+    }
+});
+
+
+
+
+リスト5-15
+@app.route('/form', methods=['post'])
+def form():
+    name = request.form.get('name')
+    mail = request.form.get('mail')
+    age = int(request.form.get('age'))
+    mydata = Mydata(name=name, mail=mail, age=age)
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    ses.add(mydata)
+    ses.commit()
+    ses.close()
+    return 'ok'
+
+
+
+
+リスト5-16
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            s_id: {{id}},
+            f_name: '', f_mail: '', f_age: 0,
+            alert:'This is SQLite3 Database sample.',
+            data: [(-1,'wait...','','')]
+        }
+    },
+    methods:{
+        getdata: function() {
+            let self = this;
+            $.get("/ajax", function(data) {
+                self.data = eval(data).reverse();
+            });
+        },
+        getById: function() {
+            let self = this;
+            $.get("/ajax/" + this.s_id, function(data) {
+                target = eval(data);
+                self.f_name = target.name;
+                self.f_mail = target.mail;
+                self.f_age = target.age;
+                self.alert = '※ID= ' + self.s_id + ' のレコード：';
+            });
+        },
+        action: function() {
+            let formData = new FormData();
+            formData.append("name", this.f_name);
+            formData.append("mail", this.f_mail);
+            formData.append("age", this.f_age);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/form/' + self.s_id,
+                data: formData,
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    self.f_name = '';
+                    self.f_mail = '';
+                    self.f_age = 0;
+                    self.getdata();
+                },
+                error: function(request, status, err) {
+                    console.log(err);
+                }
+            });
+        }
+    },
+    created: function() {
+        this.getdata();
+        this.getById();
+    }
+});
+
+
+
+
+リスト5-17
+@app.route('/<id>', methods=['GET'])
+def index_id(id):
+    return render_template('index.html', \
+        title='Index', id=id, \
+        message='※SQLite3 Database',
+        alert='This is SQLite3 Database Sample!')
+
+
+@app.route('/ajax/<id>', methods=['GET'])
+def ajax_id(id):
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    mydata = session.query(Mydata).filter(Mydata.id == id).one()
+    ses.close()
+    return jsonify(mydata.toDict());
+
+
+@app.route('/form/<id>', methods=['post'])
+def form_id(id):
+    name = request.form.get('name')
+    mail = request.form.get('mail')
+    age = int(request.form.get('age'))
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    mydata = ses.query(Mydata).filter(Mydata.id == id).one()
+    mydata.name = name
+    mydata.mail = mail
+    mydata.age = int(age)
+    ses.add(mydata)
+    ses.commit()
+    ses.close()
+    return 'ok'
+
+
+
+
+リスト5-18
+@app.route('/delete/<id>', methods=['GET'])
+def delete_id(id):
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    mydata = ses.query(Mydata).filter(Mydata.id == id).one()
+    ses.delete(mydata)
+    ses.close()
+    return "delete id = " + id
+
+
+
+
+リスト5-19
+{% raw %}
+<script type="text/x-template" id="mycomp-template">
+    <div>
+        <div class="alert alert-info">
+            <h5>{{alert}}</h5>
+        </div>
+        <div class="form-group">
+            <label for="id">Find</label>
+            <input type="text" class="form-control" 
+                id="find" v-model="find">
+        </div>           
+        <div class="form-group">
+            <button class="btn btn-primary"
+                v-on:click="action">Search</button>
+        </div>
+        <hr>
+        <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Mail</th>
+                <th>Age</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-for="item in data">
+                <th>{{item.id}}</th>
+                <td>{{item.name}}</td>
+                <td>{{item.mail}}</td>
+                <td>{{item.age}}</td>
+            </tr>
+        </tbody>
+        </table>     
+    </div>
+</script>
+{% endraw %}
+
+
+<!-- Vue.js script -->
+<script>
+Vue.component('mycomp', {
+    template: '#mycomp-template',
+    data: function() {
+        return {
+            find: '',
+            alert:'This is SQLite3 Database sample.',
+            data: [(-1,'wait...','','')]
+        }
+    },
+    methods:{
+        action: function() {
+            let formData = new FormData();
+            formData.append("find", this.find);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/find',
+                data: formData,
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    self.data = eval(data);
+                    self.alert = 'find: "' + self.find + '".'
+                },
+                error: function(request, status, err) {
+                    console.log(err);
+                }
+            });
+        }
+    },
+});
+
+
+
+
+リスト5-20
+@app.route('/find', methods=['POST'])
+def find():
+    find = request.form.get('find')
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    result = ses.query(Mydata). \
+        filter(Mydata.name == find).all()
+    ses.close()
+    return jsonify(getByList(result));
+
+
+
+
+リスト5-21
+@app.route('/find', methods=['POST'])
+def find():
+    find = request.form.get('find')
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    result = ses.query(Mydata).filter( \
+        Mydata.name.like('%{f}%'.format(f=find))).all()
+    ses.close()
+    return jsonify(getByList(result));
+
+
+
+
+リスト5-22
+@app.route('/find', methods=['POST'])
+def find():
+    find = request.form.get('find')
+    arr = find.split(',')
+    min = int(arr[0])
+    max = int(arr[1])
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    result = ses.query(Mydata).filter( \
+        Mydata.age >= min, Mydata.age <= max).all()
+    ses.close()
+    return jsonify(getByList(result));
+
+
+
+
+リスト5-23
+@app.route('/find', methods=['POST'])
+def find():
+    find = request.form.get('find')
+    arr = find.split(',')
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    result = ses.query(Mydata).filter( \
+        Mydata.name.like('%{f}%'.format(f=arr[0])) | \
+        Mydata.name.like('%{f}%'.format(f=arr[1])) \
+        ).all()
+    ses.close()
+    return jsonify(getByList(result));
+
+
+
+
+リスト5-24
+CREATE TABLE "users" (
+    "id" INTEGER NOT NULL,
+    "name" VARCHAR(255),
+    "password" VARCHAR(255),
+    PRIMARY KEY("id")
+);
+
+
+
+
+リスト5-25
+CREATE TABLE "messages" (
+    "id" INTEGER NOT NULL,
+    "users_id" INTEGER,
+    "message" VARCHAR(255),
+    "created" DATETIME,
+    PRIMARY KEY("id")
+);
+
+
+
+
+リスト5-26
+from flask import Flask, render_template, request, session, \
+    redirect, jsonify, current_app, g
+
+
+import sqlite3
+import json
+from datetime import datetime
+
+
+from sqlalchemy import create_engine, Column, Integer, String, \
+    Text, DateTime, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm.exc import NoResultFound
+
+
+import qrcode as qr
+from PIL import Image
+import base64
+from io import BytesIO
+
+
+app = Flask(__name__)
+app.secret_key = b'random string...'
+
+
+engine = create_engine('sqlite:///sample.sqlite3')
+
+
+# get QRCode data.
+def get_qrdata(s):
+    qr_img = qr.make(s)
+
+
+    byte_buf = BytesIO()
+    qr_img.save(byte_buf, format="png")
+    qr_data = byte_buf.getvalue()
+    b64_data = 'data:image/png;base64,' + \
+        base64.b64encode(qr_data).decode("utf-8")
+    return b64_data
+
+
+# base model
+Base = declarative_base()
+
+
+# model class
+
+
+class User(Base):
+    __tablename__ = 'users'
+ 
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255))
+    password = Column(String(255))
+
+
+    def to_dict(self):
+        return {
+            'id':int(self.id), 
+            'name':str(self.name), 
+            'password':str(self.password)
+        }
+
+
+class Message(Base):
+    __tablename__ = 'messages'
+ 
+    id = Column(Integer, primary_key=True)
+    users_id = Column(Integer(), ForeignKey('users.id'))
+    message = Column(String(255))
+    created = Column(DateTime())
+
+
+    user = relationship('User') 
+
+
+    def to_dict(self):
+        return {
+            'id':int(self.id), 
+            'users_id':int(self.users_id), 
+            'message':str(self.message), 
+            'created':str(self.created),
+            'user':str(self.user.name)
+        }
+
+
+# get Model-list Dictionary
+def get_by_list(arr):
+    res = []
+    for item in arr:
+        res.append(item.to_dict())
+    return res
+
+
+# access top page.
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('messages.html', \
+        login=False, \
+        title='Messages', \
+        message='not logined...', 
+        data=[] )
+
+
+# post message.
+@app.route('/post', methods=['POST'])
+def post_msg():
+    id = request.form.get('id')
+    msg = request.form.get('message')
+    created = datetime.now()
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    msg_obj = Message(users_id=id, message=msg, created=created)
+    ses.add(msg_obj)
+    ses.commit()
+    ses.close()
+    return 'True'
+
+
+# get messages.
+@app.route('/messages', methods=['POST'])
+def get_msg():
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    re = ses.query(Message).join(User).order_by(Message.created.desc())[:10]
+    msgs = get_by_list(re)
+    return jsonify(msgs)
+
+
+# get QRCode Data
+@app.route('/qr', methods=['POST'])
+def get_qr():
+    id = request.form.get('id')
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    re = ses.query(Message).filter(Message.id == id).one()
+    dic = re.to_dict()
+    dic['qr'] = get_qrdata(re.message)
+    return jsonify(dic)
+
+
+# login form sended.
+@app.route('/login', methods=['POST'])
+def login_post():
+    name = request.form.get('name')
+    pswd = request.form.get('password')
+
+
+    Session = sessionmaker(bind=engine)
+    ses = Session()
+    n = ses.query(User).filter(User.name == name).count()
+    if n == 0:
+        usr = User(name=name, password=pswd)
+        ses.add(usr)
+        ses.commit()
+        flg = str(usr.id)
+    else:
+        usr = ses.query(User).filter(User.name == name).one()
+        if pswd == usr.password:
+            flg = str(usr.id)
+        else:
+            flg = 'False'  
+    ses.close()
+    return flg
+
+
+
+
+リスト5-27
+{% raw %}
+<script type="text/x-template" id="message_board-template">
+<div>
+
+
+<div class="text-right h6">
+    <a href="javascript:void(0)" 
+        v-on:click="in_out_check">{{in_out}}</a>
+</div>
+
+
+<div class="alert alert-success p-1">
+    <h5>{{ alert_msg }}</h5>
+</div>
+
+
+<!-- Tab Panel -->
+<ul class="nav nav-tabs" role="tablist">
+
+
+    ……変更ないため省略……
+
+
+</ul>
+    
+<!-- Tab Contents -->
+<div class="tab-content">
+    <!-- First Tab -->
+    <div class="tab-pane fade show active" id="msgs" 
+            ole="tabpanel" >
+        <div  v-if="login_flg">
+            <h5 class="p-3 h5 text-center">
+                * Posted Messages *
+            </h5>
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Name</th>
+                        <th>Created</th></tr>
+                </thead>
+                <tbody>
+                <tr v-for="(item,key) in msg_data" class="clickable-row" 
+                    v-bind:data-id="item.id">
+                    <td>{{item.user}}</td>
+                    <td>{{item.created}}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Second Tab -->
+    <div class="tab-pane fade" id="frms" 
+            role="tabpanel">
+
+
+        ……変更ないため省略……
+
+
+    </div>
+</div>
+
+
+<!-- QRCode Dialog -->
+<div class="modal fade" id="QRDLOG">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div v-if="qr_msg != null" class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        {{qr_msg.user}} さんのメッセージ：
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <img width="300px" v-bind:src="qr_msg.qr" alt="QR code">
+                </div>
+                <div class="card-footer">
+                    <h6 class="text-right">{{qr_msg.created}}</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Login Dialog -->
+<div class="modal fade" id="login">
+
+
+    ……変更ないため省略……
+
+
+</div>
+
+
+</div>
+</script>
+{% endraw %}
+
+
+<script>
+// message_board object
+Vue.component('message_board', {
+    template: '#message_board-template',
+    data: function() {
+        return {
+            in_out:'login', login_flg:false,
+            login_id:-1, login_user:'',
+            form_id:'', form_pass:'',
+            login_msg:'Login form:',
+            alert_msg:'※ログインして下さい。',
+            post_msg:'',
+            msg_data:[],
+            qr_msg:null,
+        }
+    },
+    methods:{
+        // check login/logout.
+        in_out_check: function(e) {
+            if (this.login_flg) {
+                this.logout();
+            } else {
+                this.show_login();
+            }
+        },
+        //show login dialog
+        show_login: function() {
+            this.form_id = '';
+            this.form_pass = '';
+            this.login_msg = 'Login Form:';
+            $('#login').modal('show');
+        },
+        // access server and logined.
+        login: function(e) {
+            let formData = new FormData();
+            formData.append("name", this.form_id);
+            formData.append("password", this.form_pass);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/login',
+                data: formData,
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    if (data != 'False'){
+                        self.getMsg();
+                        self.in_out = 'logout';
+                        self.login_flg = true;
+                        self.login_id = data * 1;
+                        self.login_user = self.form_id;
+                        self.alert_msg = '※' + self.login_user
+                             + 'でログインしました！';
+                        self.form_id = '';
+                        self.form_pass = '';
+                        $('#login').modal('hide');
+                        self.getMsg();
+                    } else {
+                        self.login_msg = 'パスワードが違います。';
+                        self.pass = '';
+                    }
+                },
+                error: function(request, status, err) {
+                    self.login_msg = '※問題が発生しました。';
+                }
+            });
+        },
+        // logout.
+        logout: function() {
+            this.in_out = 'login';
+            this.msg_data = [];
+            this.login_flg = false;
+            this.login_id = -1;
+            this.login_user = '';
+            this.alert_msg = '※ログアウトしました。'
+        },
+        // post message.
+        postMsg: function() {
+            let formData = new FormData();
+            formData.append("id", this.login_id);
+            formData.append("message", this.post_msg);
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/post',
+                data: formData,
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    if (data == 'True') {
+                        self.alert_msg = '※メッセージを送信しました。'
+                        self.getMsg();
+                    }
+                },
+                error: function(request, status, err) {
+                    self.alert_msg = '※メッセージ送信に問題が発生しました。';
+                }
+            });
+        },
+        // get all messages.
+        getMsg: function() {
+            let self = this;
+            $.ajax({
+                type: 'POST',
+                url: '/messages',
+                processData: false,
+                contentType: false,
+
+
+                success: function (data) {
+                    $(".clickable-row").unbind('click');
+                    self.msg_data = data;
+                    self.post_msg = '';
+                    $(".clickable-row").click(function(e) {
+                        let clicked_id = e.delegateTarget.dataset['id'];
+                        let formData = new FormData();
+                        formData.append("id", clicked_id);
+                        $.ajax({
+                            type: 'POST',
+                            url: '/qr',
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+
+
+                            success: function (data) {
+                                self.qr_msg = data;
+                                $('#QRDLOG').modal('show');
+                            },
+                            error: function(request, status, err) {
+                                self.alert_msg = '※メッセージ送信に問題が発生しました。';
+                            }
+                        });
+                    });
+                    $('#msg_tab_link').tab('show');
+                },
+                error: function(request, status, err) {
+                    self.alert_msg = '※メッセージ送信に問題が発生しました。';
+                }
+            });
+        }, 
+    },
+});
+
+
+
+
+リストA-1
+a = 123
+print(a)
+b = 'ABC'
+print(b)
+
+
+
+
+リストA-2
+a = 10
+b = 20
+c = a + b
+print(c)
+
+
+
+
+リストA-3
+a = 'ABC'
+b = "xyz"
+c = a + b
+print(c)
+
+
+
+
+リストA-4
+a = 123
+b = "456"
+c = a + b
+print(c)
+
+
+
+
+リストA-5
+a = 123
+b = "456"
+c = a + int(b)
+d = str(a) + b
+print(c)
+print(d)
+
+
+
+
+リストA-6
+x = 12345
+f = x % 2
+if f == 0:
+    print(str(x) + "は、偶数です。")
+else:
+    print(str(x)  + "は、奇数です。")
+
+
+
+
+
+
+リストA-7
+x = 7
+f = x // 3
+if f == 0:
+    print(str(x) + "月は、冬です。")
+elif f == 1:
+    print(str(x) + "月は、春です。")
+elif f == 2:
+    print(str(x) + "月は、夏です。")
+elif f == 3:
+    print(str(x) + "月は、秋です。")
+elif x == 12:
+    print(str(x) + "月は、冬です。")
+else:
+    print(str(x)  + "月はありませんよ？")
+
+
+
+
+リストA-8
+x = 123
+count = 1
+total = 0
+while count <= x:
+    total = total + count
+    count = count + 1
+else:
+    print(str(x) + 'までの合計は、' + str(total) + 'です。')
+
+
+
+
+リストA-9
+x = 123
+total = 0
+for n in range(1, x):
+    total = total + n
+else:
+    total = total + x
+print(str(x) + 'までの合計は、' + str(total) + 'です。')
+
+
+
+
+リストA-10
+x = 123
+total = 0
+n = 0
+while True:
+    n += 1
+    if n > x:
+        break
+    if n % 2 !=0:
+        continue
+    total += n
+print(str(x) + 'までの偶数の合計は、' + str(total) + 'です。')
+
+
+
+
+リストA-11
+arr = ['hello','welcome','bye']
+for n in arr:
+    print(n)
+
+
+
+
+リストA-12
+for n in range(10):
+    print(n)
+
+
+
+
+リストA-13
+a = {'a', 'b'}
+b = {'b', 'c'}
+c1 = a & b
+c2 = a | b
+c3 = a ^ b
+print(c1)
+print(c2)
+print(c3)
+
+
+
+
+リストA-14
+dic = {'taro':'taro@yamada.com',
+       'hanako':'hanako@flower',
+       'ichiro':'ichiro@baseball'}
+for n in dic:
+    print(n + ' (' + dic[n] + ')')
+
+
+
+
+リストA-15
+a = "Taro"
+b = "Hanako"
+c = "Ichiro"
+ 
+print("Hello," + a + ".How are you?")
+print("Hello," + b + ".How are you?")
+print("Hello," + c + ".How are you?")
+
+
+
+
+リストA-16
+def showMsg(str):
+    print("Hello," + str + ".How are you?")
+ 
+showMsg("Taro")
+showMsg("Hanako")
+showMsg("Ichiro")
+
+
+
+
+リストA-17
+def showMsg(str):
+    return "Hello," + str + ".How are you?"
+ 
+res = showMsg("Taro")
+print(res)
+res = showMsg("Hanako")
+print(res)
+res = showMsg("Ichiro")
+print(res)
+
+
+
+
+リストA-18
+def showMsg(name, header='Hello', footer='How are you?'):
+    print(header + "," + name + ". " + footer)
+ 
+showMsg('Taro')
+showMsg('花子', 'こんにちは', 'お元気ですか。')
+showMsg('Sachiko', footer='bye!', header='Welcome')
+
+
+
+
+リストA-19
+class Member:
+    name = ""
+     
+    def showMsg(self):
+        print("Hello," + self.name + ".How are you?")
+
+
+
+
+リストA-20
+class Member:
+    name = ""
+     
+    def showMsg(self):
+        print("Hello," + self.name + ".How are you?")
+ 
+taro = Member()
+taro.name = "Taro"
+taro.showMsg()
+ 
+hanako = Member()
+hanako.name = "Hanako"
+hanako.showMsg()
+
+
+
+
+リストA-21
+class Member:
+    name = ""
+     
+    def __init__(self, str):
+        self.name = str
+     
+    def showMsg(self):
+        print("Hello," + self.name + ".How are you?")
+ 
+taro = Member("Taro")
+taro.showMsg()
+ 
+hanako = Member("Hanako")
+hanako.showMsg()
+
+
+
+
+リストA-22
+class Member:
+    name = ""
+     
+    def __init__(self,str):
+        self.name = str
+     
+    def showMsg(self):
+        print("Hello," + self.name + ".How are you?")
+ 
+class PowerMember (Member):
+    mail = ""
+     
+    def __init__(self,str1,str2):
+        self.name = str1
+        self.mail = str2
+         
+    def showMsg(self):
+        print("Hello," + self.name + ".")
+        print("Your mail address is '" + self.mail + "'.")
+ 
+taro = Member("Taro")
+taro.showMsg()
+ 
+hanako = PowerMember("Hanako","hanako@flower.com")
+hanako.showMsg()
+
